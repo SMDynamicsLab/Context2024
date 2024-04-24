@@ -1,0 +1,1 @@
+{"ISI": 500, "n_stim": 35, "n_trials_percond": 12, "n_blocks": 3, "n_subj_max": 100, "perturb_bip_range": [17, 22], "perturb_type_dictionary": {"SC": 0}, "perturb_size_dictionary": {"neg": -50, "neg2": -20, "iso": 0, "pos2": 20, "pos": 50}, "n_conditions": 5, "n_trials": 60, "path": "../data/Experiment_SC/"}
