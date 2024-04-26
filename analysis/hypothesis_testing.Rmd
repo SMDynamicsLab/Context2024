@@ -1,21 +1,17 @@
 ---
-title: "linear regression for temporal context tapping data"
+title: "Hypothesis testing - Silva & Laje 2024"
 output: html_document
-date: "2023-06-14"
+date: "2024-04-26"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
 
 library(tidyverse)
 library(lme4)
 library(lmerTest)
 library(car)
 library(magrittr)
-library(patchwork)
 library(emmeans)
-library(knitr)
 
 
 ```
@@ -23,8 +19,8 @@ library(knitr)
 
 ```{r load_data, echo=FALSE}
 
-data_df = read.csv("levantar_datos/data_GroupSubjCond_OS_df.csv")
-dict_df = read.csv("levantar_datos/data_GroupSubjCond_OS_dict.csv")
+data_df = read.csv("../data/data_GroupSubjCond_OS_df.csv")
+dict_df = read.csv("../data/data_GroupSubjCond_OS_dict.csv")
 
 
 
@@ -71,155 +67,6 @@ resynch_end <- 6
 
 ```
 
-```{r average_data, echo=FALSE}
-
-# average original data
-data3_mean_df <- data3_df %>%
-					group_by(context,perturb_type,perturb_sign,beep) %>%
-					summarise(mean_asyn=mean(asyn),
-							  sd_asyn=sd(asyn),
-							  mean_pred_asyn=mean(pred_asyn),
-							  sd_pred_asyn=sd(pred_asyn),
-							  n_asyn=n(),
-							  .groups = "drop") %>%
-					ungroup()
-
-# invert sign of positive perturbations
-data3_mean_inv_df <- data3_mean_df %>%
-						mutate(mean_asyn = if_else(perturb_sign=='pos',-mean_asyn,mean_asyn),
-							   mean_pred_asyn =
-							   		if_else(perturb_sign=='pos',-mean_pred_asyn,mean_pred_asyn),
-							   perturb_sign = if_else(perturb_sign=='pos','(-)pos','neg'))
-levels_Sinv <- c("neg","(-)pos")
-data3_mean_inv_df$perturb_sign <- factor(data3_mean_inv_df$perturb_sign, levels=levels_Sinv)#, ordered=TRUE)
-
-# data3_asym_df <- data3_mean_df %>%
-# 					# change sign of negative perturbations so we can compute asym as a difference
-# 					# mutate(mean_asyn = if_else(perturb_sign=='neg',-mean_asyn,mean_asyn),
-# 					# 	   mean_pred_asyn =
-# 					# 	   	if_else(perturb_sign=='neg',-mean_pred_asyn,mean_pred_asyn)) %>%
-# 					mutate(mean_asyn = if_else(perturb_sign=='pos',-mean_asyn,mean_asyn),
-# 							mean_pred_asyn =
-# 						   		if_else(perturb_sign=='pos',-mean_pred_asyn,mean_pred_asyn),
-# 							perturb_sign = if_else(perturb_sign=='pos','(-)pos','neg'))
-# data3_asym_df$perturb_sign <- factor(data3_asym_df$perturb_sign, levels=levels_Sinv)
-# data3_asym_df <- data3_asym_df %>%
-data3_asym_df <- data3_mean_inv_df %>%
-					group_by(context,perturb_type,beep) %>%
-					# NEEDED: previous factor level ordering does not influence row order for diff!!
-					arrange(desc(perturb_sign), .by_group=TRUE) %>%
-					summarise(asym=diff(mean_asyn),
-							  var_pooled=sum((n_asyn-1)*sd_asyn**2)/sum(n_asyn-1),
-							  n_pooled=
-							  	sum(sd_asyn**2/n_asyn)**2/sum((sd_asyn**2/n_asyn)**2/(n_asyn-1)),
-							  ci_asym=1.96*sqrt(var_pooled)/sqrt(n_pooled),
-							  asym_pred=diff(mean_pred_asyn),
-							  var_pred_pooled=sum((n_asyn-1)*sd_pred_asyn**2)/sum(n_asyn-1),
-							  ci_asym_pred=1.96*sqrt(var_pred_pooled)/sqrt(n_pooled),
-							  .groups = "drop")
-
-data3_asym_resynch_df <- data3_df %>%
-					# keep resynchronization phase only (post-perturbation transient)
-					filter(beep>=resynch_start & beep<=resynch_end) %>%
-					# average across subjects and beeps
-					group_by(context,perturb_type,perturb_sign) %>%
-					summarise(mean_asyn=mean(asyn),
-							  sd_asyn=sd(asyn),
-							  mean_pred_asyn=mean(pred_asyn),
-							  sd_pred_asyn=sd(pred_asyn),
-							  n_asyn=n(),
-							  .groups = "drop") %>%
-					# change sign of negative perturbations so we can compute asym as a difference
-					# mutate(mean_asyn = if_else(perturb_sign=='neg',-mean_asyn,mean_asyn),
-					# 	   mean_pred_asyn =
-					# 			if_else(perturb_sign=='neg',-mean_pred_asyn,mean_pred_asyn)) %>%
-					mutate(mean_asyn = if_else(perturb_sign=='pos',-mean_asyn,mean_asyn),
-							mean_pred_asyn =
-								if_else(perturb_sign=='pos',-mean_pred_asyn,mean_pred_asyn),
-							perturb_sign = if_else(perturb_sign=='pos','(-)pos','neg')) %>%
-# data3_asym_resynch_df$perturb_sign <- factor(data3_asym_resynch_df$perturb_sign, levels=levels_Sinv)
-# data3_asym_resynch_df <- data3_asym_resynch_df %>%
-					# compute asym
-					group_by(context,perturb_type) %>%
-					# NEEDED: previous factor level ordering does not influence row order for diff!!
-					arrange(perturb_sign, .by_group=TRUE) %>%
-					summarise(asym_ave=diff(mean_asyn),
-							  var_pooled=sum((n_asyn-1)*sd_asyn**2)/sum(n_asyn-1),
-							  n_pooled=
-							  	sum(sd_asyn**2/n_asyn)**2/sum((sd_asyn**2/n_asyn)**2/(n_asyn-1)),
-							  ci_asym=1.96*sqrt(var_pooled)/sqrt(n_pooled),
-							  asym_pred_ave=diff(mean_pred_asyn),
-							  var_pred_pooled=sum((n_asyn-1)*sd_pred_asyn**2)/sum(n_asyn-1),
-							  ci_asym_pred=1.96*sqrt(var_pred_pooled)/sqrt(n_pooled),
-							  .groups = "drop") %>%
-					unite(typeXcontext, c(perturb_type, context), sep = "", remove = FALSE)
-# set as factor with levels in this specific order
-levels_TC <- c("PSpure","PScomb","SCcomb","SCpure")
-data3_asym_resynch_df$typeXcontext <- factor(data3_asym_resynch_df$typeXcontext, levels=levels_TC)
-
-
-
-```
-
-```{r plot_data, echo=FALSE}
-
-
-plot_3way_facet_diff <- data3_mean_df %>%
-				ggplot(
-					aes(x=beep, y=mean_asyn,
-						group=interaction(context,perturb_type,perturb_sign),
-						color=context,
-						shape=perturb_type,
-						linetype=perturb_sign)) +
-				geom_line() +
-				facet_grid(rows=vars(perturb_sign), cols=vars(perturb_type)) +
-				geom_point(size=2) +
-				scale_x_continuous(limits=c(-3,10))
-
-plot_3way_facet_asym <- data3_mean_inv_df %>%
-				ggplot(
-					aes(x=beep, y=mean_asyn,
-						group=interaction(context,perturb_type,perturb_sign),
-						color=context,
-						shape=perturb_type,
-						linetype=perturb_sign)) +
-				geom_line() +
-				facet_grid(rows=vars(context), cols=vars(perturb_type)) +
-				geom_point(size=2) +
-				scale_x_continuous(limits=c(-3,10))
-
-plot_asym <- data3_asym_df %>%
-				ggplot(
-					aes(x=beep, y=asym,
-						group=interaction(context,perturb_type),
-						color=context,
-						shape=perturb_type)) +
-				geom_line() +
-				geom_errorbar(aes(x=beep, ymin=asym-ci_asym,
-								  ymax=asym+ci_asym, width=0.2)) +
-				geom_point() +
-				guides(linetype=FALSE) +
-				scale_x_continuous(limits=c(-3,10))
-
-plot_asym_resynch <- data3_asym_resynch_df %>%
-				ggplot(
-					aes(x=typeXcontext, y=asym_ave,
-						color=context,
-						shape=perturb_type)) +
-				geom_errorbar(aes(x=typeXcontext, ymin=asym_ave-ci_asym,
-								  ymax=asym_ave+ci_asym, width=0.2)) +
-				geom_point() +
-				theme(legend.position = "none")
-
-fig1 <- plot_3way_facet_diff
-fig2 <- plot_3way_facet_asym
-fig3 <- (plot_asym + plot_asym_resynch + plot_layout(ncol = 2, widths = c(2, 1)))
-
-fig1
-fig2
-fig3
-
-```
 
 ```{r fit_model_DIFF_lme4, echo=FALSE}
 
