@@ -258,7 +258,7 @@ plot_a = (ggplot(dataU_df,aes(x = 'Relative_beep', y = 'Virtual_Asyn',
           + theme(plot_title=element_text(face="bold"))
          )
 #print(plot_a)
-plot_a.save('./data_Large_Bavassi_Repp_Thaut/Large_BavassiThaut_Repp.pdf')
+plot_a.save('./figure_1b.pdf')
 
 
     #%% POWER ANALYSIS PSneg.

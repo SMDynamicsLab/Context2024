@@ -6,6 +6,7 @@ Created on Thu Sep  8 13:46:34 2022
 @author: RLaje, Asilva
 """
 
+import numpy as np
 import analysis_aux as aux
 
 
@@ -101,6 +102,8 @@ aux.Outliers_Subj_Cuantification(path, data_OutSubj_df)
 #%% Group_Subject_Condition_Outlier_Subject
 # Function to obtain meanasyn and stdasyn for each group subject condition.
 data_GroupSubjCond_OS_df = aux.Group_Subject_Condition_Outlier_Subject(data_OutSubj_df)
+data_GroupSubjCond_OS_df[0].to_csv(path + "data_GroupSubjCond_OS_dict.csv", na_rep = np.NaN)
+data_GroupSubjCond_OS_df[1].to_csv(path + "data_GroupSubjCond_OS_df.csv", na_rep = np.NaN)
 
 
 #%% Difference

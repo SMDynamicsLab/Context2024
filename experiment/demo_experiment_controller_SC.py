@@ -12,7 +12,7 @@ import random
 import os
 import pandas as pd
 import json
-import tappinduino as tp
+import tappingduino as tp
 
 
 #%% Description

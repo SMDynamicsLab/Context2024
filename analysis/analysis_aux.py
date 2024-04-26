@@ -27,7 +27,7 @@ import statsmodels.stats.multitest as sm
 # Setting path.
 sys.path.append('../experiment')
 # Importing.
-import tappinduino as tp
+import tappingduino as tp
 
 
 #%% Load Data.
@@ -137,7 +137,7 @@ def Load_AllAsynchronies_AllValidTrials(path, n_blocks):
 
 #%% Experiments_Parameters
 # Function to load all experiments parameters. Return a nested dictionary.
-# path --> string (ej: '../data/'). 
+# path --> string (ej: '../analysis/'). 
 def Experiments_Parameters(path):
     
     # Define path.
@@ -207,7 +207,7 @@ def Asyn_Zeroed(data_df):
 #%% Preprocessing_Data
 # Function to process data for all experiments and general conditions dictionary, 
 # considering the transient and the beeps out of range. Return tuple with two dataframes.
-# path --> string (ej: '../data/'). transient_dur --> int (ej: 1).
+# path --> string (ej: '../analysis/'). transient_dur --> int (ej: 1).
 def Preprocessing_Data(path, transient_dur): 
 
     # Experiments Parameters.
@@ -275,7 +275,7 @@ def Preprocessing_Data(path, transient_dur):
 
 #%% Preprocessing_Data_AllExperiments_MarkingTrialOutliers
 # Function to process data for all experiments and general conditions dictionary, marking outlier trials. Return a tuple with three dataframes.
-# path --> string (ej: '../data/'). data_df --> dataframe. postPerturb_bip --> int (ej: 5).
+# path --> string (ej: '../analysis/'). data_df --> dataframe. postPerturb_bip --> int (ej: 5).
 def Preprocessing_Data_AllExperiments_MarkingTrialOutliers(path, data_df, postPerturb_bip):
 
     # Experiments dictionary and data
@@ -347,7 +347,7 @@ def Preprocessing_Data_AllExperiments_MarkingTrialOutliers(path, data_df, postPe
 
 #%% Outliers_Trials_Cuantification
 # Function to know outlier trials information.
-# path --> string (ej: '../data/'). data_OutTrials_df --> dataframe.
+# path --> string (ej: '../analysis/'). data_OutTrials_df --> dataframe.
 def Outliers_Trials_Cuantification(path, data_OutTrials_df):
     
     # Experiments dictionary and data
@@ -388,19 +388,19 @@ def Outliers_Trials_Cuantification(path, data_OutTrials_df):
     data_aux9_df = data_aux3_df[(data_aux3_df['Total_outlier_trials_porc'] == data_aux3_df.Total_outlier_trials_porc.max())].reset_index(drop = True)
 
     # Save files
-    data_porcOutTrials_df.to_csv(path + "porc_outlier_trials_perExp_perSubj_perCond.csv", na_rep = np.NaN)
-    data_aux3_df.to_csv(path + "porc_outlier_trials_perExp_perSubj.csv", na_rep = np.NaN)
-    data_aux6_df.to_csv(path + "porc_outlier_trials_perExp.csv", na_rep = np.NaN)
-    data_aux7_df.to_csv(path + "total_subj_with_outlier_trials.csv", na_rep = np.NaN)
-    data_aux8_df.to_csv(path + "subj_with_more_outlier_trials.csv", na_rep = np.NaN)
-    data_aux9_df.to_csv(path + "subj_with_more_outlier_trials_porc.csv", na_rep = np.NaN)
+    data_porcOutTrials_df.to_csv('./outlier_metrics/' + "porc_outlier_trials_perExp_perSubj_perCond.csv", na_rep = np.NaN)
+    data_aux3_df.to_csv('./outlier_metrics/' + "porc_outlier_trials_perExp_perSubj.csv", na_rep = np.NaN)
+    data_aux6_df.to_csv('./outlier_metrics/' + "porc_outlier_trials_perExp.csv", na_rep = np.NaN)
+    data_aux7_df.to_csv('./outlier_metrics/' + "total_subj_with_outlier_trials.csv", na_rep = np.NaN)
+    data_aux8_df.to_csv('./outlier_metrics/' + "subj_with_more_outlier_trials.csv", na_rep = np.NaN)
+    data_aux9_df.to_csv('./outlier_metrics/' + "subj_with_more_outlier_trials_porc.csv", na_rep = np.NaN)
     
     return
 
 
 #%% Preprocessing_Data_AllExperiments_MarkingSubjCondOutliers
 # Function to process data for all experiments and general conditions dictionary, marking outlier subject conditions. Return a tuple with four dataframes.
-# path --> string (ej: '../data/'). data_OutTrials_df--> dataframe. porcTrialPrevCond --> int (ej: 10). postPerturb_bip --> int (ej: 5).
+# path --> string (ej: '../analysis/'). data_OutTrials_df--> dataframe. porcTrialPrevCond --> int (ej: 10). postPerturb_bip --> int (ej: 5).
 def Preprocessing_Data_AllExperiments_MarkingSubjCondOutliers(path, data_OutTrials_df, porcTrialPrevCond, postPerturb_bip):
 
     # Experiments dictionary and data
@@ -509,7 +509,7 @@ def Preprocessing_Data_AllExperiments_MarkingSubjCondOutliers(path, data_OutTria
 
 #%% Outliers_SubjCond_Cuantification
 # Function to know outlier subject conditions cuantification.
-# path --> string (ej: '../data/'). data_OutSubjCond_df --> dataframe.
+# path --> string (ej: '../analysis/'). data_OutSubjCond_df --> dataframe.
 def Outliers_SubjCond_Cuantification(path, data_OutSubjCond_df):
 
     # Experiments dictionary and data
@@ -536,15 +536,15 @@ def Outliers_SubjCond_Cuantification(path, data_OutSubjCond_df):
     data_porcTotalOutCondPerTotalSubjCond_df["Total_out_cond_perSubjCond_porc"] = data_porcTotalOutCondPerTotalSubjCond_df["Total_outlier_conditions"] * 100 / data_porcTotalOutCondPerTotalSubjCond_df["Total_subjCond"]
 
     # Save Files.
-    data_porcOutSubjCond_df.to_csv(path + "porc_outlier_conditions_perExp_perSub.csv", na_rep = np.NaN)
-    data_porcTotalOutCondPerTotalSubjCond_df.to_csv(path + "porc_outlier_conditions_perExp_perSubjCond.csv", na_rep = np.NaN)
+    data_porcOutSubjCond_df.to_csv('./outlier_metrics/' + "porc_outlier_conditions_perExp_perSub.csv", na_rep = np.NaN)
+    data_porcTotalOutCondPerTotalSubjCond_df.to_csv('./outlier_metrics/' + "porc_outlier_conditions_perExp_perSubjCond.csv", na_rep = np.NaN)
 
     return
 
 
 #%% Preprocessing_Data_AllExperiments_MarkingSubjOutliers
 # Function to process data for all experiments and general conditions dictionary, marking outlier subjects. Return a tuple with four dataframes.
-# path --> string (ej: '../data/'). data_OutSubjCond_df --> dataframe. porcSubjCondPrevCond --> int (ej: 10).
+# path --> string (ej: '../analysis/'). data_OutSubjCond_df --> dataframe. porcSubjCondPrevCond --> int (ej: 10).
 def Preprocessing_Data_AllExperiments_MarkingSubjOutliers(path, data_OutSubjCond_df, porcSubjCondPrevCond):
 
     # Experiments dictionary and data
@@ -585,7 +585,7 @@ def Preprocessing_Data_AllExperiments_MarkingSubjOutliers(path, data_OutSubjCond
 
 #%% Outliers_Subj_Cuantification
 # Function to know outlier subjects cuantification.
-# path --> string (ej: '../data/'). data_OutSubj_df --> dataframe.
+# path --> string (ej: '../analysis/'). data_OutSubj_df --> dataframe.
 def Outliers_Subj_Cuantification(path, data_OutSubj_df):
 
     # Experiments dictionary and data
@@ -620,8 +620,8 @@ def Outliers_Subj_Cuantification(path, data_OutSubj_df):
                                                                                                 Outlier_subj_porcPrevCond = ("Outlier_subj_porcPrevCond", "max"))
 
     # Save Files.
-    result_df.to_csv(path + "porc_outlier_subjects_perExp_perCond.csv", na_rep = np.NaN)
-    result2_df.to_csv(path + "perExp_perSubj_perCond_What_is_the_outlier_condition_criteria.csv", na_rep = np.NaN)
+    result_df.to_csv('./outlier_metrics/' + "porc_outlier_subjects_perExp_perCond.csv", na_rep = np.NaN)
+    result2_df.to_csv('./outlier_metrics/' + "perExp_perSubj_perCond_What_is_the_outlier_condition_criteria.csv", na_rep = np.NaN)
 
 
 #%% Group_Subject_Condition_Outlier_Subject
@@ -673,7 +673,7 @@ def Group_Subject_Condition_Outlier_Subject(data_OutSubj_df):
 
 #%% Difference_Between_Same_Condition_Different_Experiments_BootstrappingPerSubject
 # Function to get difference between same condition different experiments calculating p-value using bootstrapping per subject.
-# path --> string (ej: '../data/'). data_GroupSubjCond_OS_df --> dataframe. experiment_name_1 --> string (ej: 'Experiment_SC'). 
+# path --> string (ej: '../analysis/'). data_GroupSubjCond_OS_df --> dataframe. experiment_name_1 --> string (ej: 'Experiment_SC'). 
 # experiment_name_2 --> string (ej: 'Experiment_PS_SC'). experiment_condition --> string (ej: 'SCneg'). perturb_size --> int (ej: 50). 
 # relative_beep_ini --> int (ej: 1). relative_beep_final --> int (ej: 6). figure_number --> int (ej: 1). histogram --> boolean (ej: True).
 def Difference_Between_Same_Condition_Different_Experiments_BootstrappingPerSubject(path, data_GroupSubjCond_OS_df, experiment_name_1, experiment_name_2, experiment_condition, perturb_size, relative_beep_ini, relative_beep_final, figure_number):
@@ -854,7 +854,7 @@ def Difference_Between_Same_Condition_Different_Experiments_BootstrappingPerSubj
 
 #%% Difference
 # Function to get difference between same condition different experiments.
-# path --> string (ej: '../data/'). data_GroupSubjCond_OS_df --> dataframe. difference_list --> list (ej: [['Experiment_PS', 'Experiment_PS_SC', 'PSneg']]). 
+# path --> string (ej: '../analysis/'). data_GroupSubjCond_OS_df --> dataframe. difference_list --> list (ej: [['Experiment_PS', 'Experiment_PS_SC', 'PSneg']]). 
 # perturb_size --> int (ej: 50). relative_beep_ini --> int (ej: 1). relative_beep_final --> int (ej: 6). figure_number --> int (ej: 1).
 def Difference(path, data_GroupSubjCond_OS_df, difference_list, perturb_size, relative_beep_ini, relative_beep_final, figure_number):
 
@@ -896,7 +896,7 @@ def Difference(path, data_GroupSubjCond_OS_df, difference_list, perturb_size, re
 
 #%% Asymmetry_Between_Opposite_Conditions_Same_Experiments_BootstrappingPerSubject
 # Function to get asymmetry between opposite conditions from same experiment calculating p-value using bootstrapping per subject.
-# path --> string (ej: '../data/'). data_GroupSubjCond_OS_df --> dataframe. experiment_name --> string (ej: 'Experiment_SC'). 
+# path --> string (ej: '../analysis/'). data_GroupSubjCond_OS_df --> dataframe. experiment_name --> string (ej: 'Experiment_SC'). 
 # experiment_type --> string (ej: 'SC'). perturb_size --> int (ej: 50). relative_beep_ini --> int (ej: 1). relative_beep_final --> int (ej: 6). 
 # figure_number --> int (ej: 1). histogram --> boolean (ej: True).
 def Asymmetry_Between_Opposite_Conditions_Same_Experiments_BootstrappingPerSubject(path, data_GroupSubjCond_OS_df, experiment_name, experiment_type, perturb_size, relative_beep_ini, relative_beep_final, figure_number):
@@ -1087,7 +1087,7 @@ def Asymmetry_Between_Opposite_Conditions_Same_Experiments_BootstrappingPerSubje
 
 #%% Asymmetry
 # Function to get asymmetry between opposite conditions from same experiment.
-# path --> string (ej: '../data/'). data_GroupSubjCond_OS_df --> dataframe. asymmetry_list --> list (ej: [['Experiment_PS', 'PS']]).
+# path --> string (ej: '../analysis/'). data_GroupSubjCond_OS_df --> dataframe. asymmetry_list --> list (ej: [['Experiment_PS', 'PS']]).
 # perturb_size --> int (ej: 50). relative_beep_ini --> int (ej: 1). relative_beep_final --> int (ej: 6). figure_number --> int (ej: 1).
 def Asymmetry(path, data_GroupSubjCond_OS_df, asymmetry_list, perturb_size, relative_beep_ini, relative_beep_final, figure_number):
 
@@ -1226,7 +1226,7 @@ def Plot_Differences(data_GroupCond_MPT_df, difference_df):
               + ggtitle("(a)")
               )
     #print(plot_d)
-    #plot_d.save('../data/' + 'plot_d.pdf')
+    #plot_d.save('../analysis/' + 'plot_d.pdf')
 
     # Difference in postperturb resynchronization transient (RelativeBeep 1-6).
     data_df = data_GroupCond_MPT_df.reset_index(drop=True)
@@ -1267,13 +1267,13 @@ def Plot_Differences(data_GroupCond_MPT_df, difference_df):
               + ggtitle("(b)")
               )
     #print(plot_e)
-    #plot_e.save('../data/' + 'plot_e.pdf')
+    #plot_e.save('../analysis/' + 'plot_e.pdf')
 
     # Plotting
     plot_d2 = pw.load_ggplot(plot_d)
     plot_e2 = pw.load_ggplot(plot_e)
     plot_de = plot_d2|plot_e2
-    plot_de.savefig('../data/' + 'plot_de.pdf')
+    #plot_de.savefig('../analysis/' + 'plot_de.pdf')
 
 
 #%% Plot_Asymmetries
@@ -1300,7 +1300,7 @@ def Plot_Asymmetries(data_GroupCond_MPT_df, asymmetry_df):
     # Filtering information
     asymmetry_df = asymmetry_df[(asymmetry_df['Relative_beep'] >= x_lims[0]) & (asymmetry_df['Relative_beep'] <= x_lims[1])]
     asymmetry_df.rename(columns={"Experiment_context": "Context", "Experiment_type": "Type"}, inplace=True)
-    #asymmetry_df.to_csv('../data/' + "asymmetry_df.csv", na_rep = np.NaN)
+    #asymmetry_df.to_csv('../analysis/' + "asymmetry_df.csv", na_rep = np.NaN)
     
     # Plotting
     plot_a = (ggplot(asymmetry_df, aes(x = 'Relative_beep', y = 'Asyn_zeroed', group = 'Title', 
@@ -1321,7 +1321,7 @@ def Plot_Asymmetries(data_GroupCond_MPT_df, asymmetry_df):
               + ggtitle("(a)")
               )
     #print(plot_a)
-    #plot_a.save('../data/' + 'plot_a.pdf')
+    #plot_a.save('../analysis/' + 'plot_a.pdf')
     
     # Asynchrony in postperturb resynchronization transient (RelativeBeep 1-6).
     data_df = data_GroupCond_MPT_df.reset_index(drop=True)
@@ -1362,13 +1362,13 @@ def Plot_Asymmetries(data_GroupCond_MPT_df, asymmetry_df):
               + ggtitle("(b)")
               )
     #print(plot_b)
-    #plot_b.save('../data/' + 'plot_b.pdf')
+    #plot_b.save('../analysis/' + 'plot_b.pdf')
 
     # Plotting
     plot_a2 = pw.load_ggplot(plot_a)
     plot_b2 = pw.load_ggplot(plot_b)
     plot_ab = plot_a2|plot_b2
-    plot_ab.savefig('../data/' + 'plot_ab.pdf')
+    plot_ab.savefig('../analysis/' + 'figure_4.pdf')
 
 
 #%% Plot_Mean_Across_Subjects_to_Calculate_Difference
@@ -1400,7 +1400,7 @@ def Plot_Mean_Across_Subjects_to_Calculate_Difference(differenceMinSub_df):
     differenceMinSub_df.rename(columns={"Experiment_context": "Context", "Experiment_sign": "Sign", "Experiment_type": "Type"}, inplace=True)
     differenceMinSub_df.loc[differenceMinSub_df.Context == "Combined", 'Context'] = "comb"
     differenceMinSub_df.loc[differenceMinSub_df.Context == "Pure", 'Context'] = "pure"
-    #differenceMinSub_df.to_csv('../data/' + "differenceMinSub_df.csv", na_rep = np.NaN)
+    #differenceMinSub_df.to_csv('../analysis/' + "differenceMinSub_df.csv", na_rep = np.NaN)
     
     # Plotting
     plot_f = (
@@ -1434,7 +1434,7 @@ def Plot_Mean_Across_Subjects_to_Calculate_Difference(differenceMinSub_df):
                 + ylab("Asynchrony (ms)")
                 )
     #print(plot_f)
-    plot_f.save('../data/' + 'plot_f.pdf')
+    plot_f.save('../analysis/' + 'figure_2.pdf')
 
 
 #%% Plot_Mean_Across_Subjects_to_Calculate_Asymmetry
@@ -1465,7 +1465,7 @@ def Plot_Mean_Across_Subjects_to_Calculate_Asymmetry(asymmetryAdd1Add2_df):
     asymmetryAdd1Add2_df.rename(columns={"Experiment_context": "Context", "Experiment_sign": "Sign", "Experiment_type": "Type"}, inplace=True)
     asymmetryAdd1Add2_df.loc[asymmetryAdd1Add2_df.Context == "Combined", 'Context'] = "comb"
     asymmetryAdd1Add2_df.loc[asymmetryAdd1Add2_df.Context == "Pure", 'Context'] = "pure"
-    #asymmetryAdd1Add2_df.to_csv('../data/' + "asymmetryAdd1Add2_df.csv", na_rep = np.NaN)
+    #asymmetryAdd1Add2_df.to_csv('../analysis/' + "asymmetryAdd1Add2_df.csv", na_rep = np.NaN)
 
     # Plotting
     plot_g = (
@@ -1499,7 +1499,7 @@ def Plot_Mean_Across_Subjects_to_Calculate_Asymmetry(asymmetryAdd1Add2_df):
                 + ylab("Asynchrony (ms)")
                 )
     #print(plot_g)
-    plot_g.save('../data/' + 'plot_g.pdf')
+    #plot_g.save('../analysis/' + 'plot_g.pdf')
 
 
 #%% Plot_Mean_Across_Subjects_to_Calculate_Asymmetry_PosInverted
@@ -1534,7 +1534,7 @@ def Plot_Mean_Across_Subjects_to_Calculate_Asymmetry_PosInverted(asymmetryAdd1Ad
     asymmetryAdd1Add2_df = asymmetryAdd1Add2_df.assign(Sign = asymmetryAdd1Add2_cat)
     asymmetryAdd1Add2_df.loc[asymmetryAdd1Add2_df.Context == "Combined", 'Context'] = "comb"
     asymmetryAdd1Add2_df.loc[asymmetryAdd1Add2_df.Context == "Pure", 'Context'] = "pure"
-    #asymmetryAdd1Add2_df.to_csv('../data/' + "asymmetryAdd1Add2_df.csv", na_rep = np.NaN)
+    #asymmetryAdd1Add2_df.to_csv('../analysis/' + "asymmetryAdd1Add2_df.csv", na_rep = np.NaN)
 
     # Plotting
     plot_h = (
@@ -1568,7 +1568,7 @@ def Plot_Mean_Across_Subjects_to_Calculate_Asymmetry_PosInverted(asymmetryAdd1Ad
                 + ylab("Asynchrony (ms)")
                 )
     #print(plot_h)
-    plot_h.save('../data/' + 'plot_h.pdf')
+    plot_h.save('../analysis/' + 'figure_3.pdf')
 
 
 #%% Plot_Mean_Across_Subjects
@@ -1623,7 +1623,7 @@ def Plot_Mean_Across_Subjects(differenceMinSub_df):
               + ylab("Asynchrony (ms)")
             )
     #print(plot_i)
-    plot_i.save('../data/' + 'plot_i.pdf')    
+    #plot_i.save('../analysis/' + 'plot_i.pdf')    
 
 
 #%% Plot_Mean_Across_Subjects_for_Type_Sign_and_Context
@@ -1679,7 +1679,7 @@ def Plot_Mean_Across_Subjects_for_Type_Sign_and_Context(data_GroupCond_MPT_df, d
                 + ggtitle("(c)")
                 )
     #print(plot_l)
-    #plot_l.save('../data/' + 'plot_l.pdf')
+    #plot_l.save('../analysis/' + 'plot_l.pdf')
         
     # Data for plotting x = 'Context-Type'
     data_df = data_GroupCond2_MPT_df.reset_index(drop=True)
@@ -1713,7 +1713,7 @@ def Plot_Mean_Across_Subjects_for_Type_Sign_and_Context(data_GroupCond_MPT_df, d
                 + ggtitle("(a)")
                 )
     #print(plot_m)
-    #plot_m.save('../data/' + 'plot_m.pdf')
+    #plot_m.save('../analysis/' + 'plot_m.pdf')
     
     # Data for plotting x = 'Context-Sign'
     data_df = data_GroupCond3_MPT_df.reset_index(drop=True)
@@ -1747,7 +1747,7 @@ def Plot_Mean_Across_Subjects_for_Type_Sign_and_Context(data_GroupCond_MPT_df, d
                 + ggtitle("(b)")
                 )
     #print(plot_n)
-    #plot_n.save('../data/' + 'plot_n.pdf')
+    #plot_n.save('../analysis/' + 'plot_n.pdf')
 
 
     #ASYMMETRY
@@ -1795,7 +1795,7 @@ def Plot_Mean_Across_Subjects_for_Type_Sign_and_Context(data_GroupCond_MPT_df, d
                 + ggtitle("(c)")
                 )
     #print(plot_o)
-    #plot_o.save('../data/' + 'plot_o.pdf')
+    #plot_o.save('../analysis/' + 'plot_o.pdf')
 
     # Data for plotting x = 'Sign-Type'
     data_df = data_GroupCond4_MPT_df.reset_index(drop=True)
@@ -1826,7 +1826,7 @@ def Plot_Mean_Across_Subjects_for_Type_Sign_and_Context(data_GroupCond_MPT_df, d
                 + ggtitle("(a)")
                 )
 #    print(plot_p)
-#    plot_p.save('../data/' + 'plot_p.pdf')
+#    plot_p.save('../analysis/' + 'plot_p.pdf')
 
     data_inv_df = (data_GroupCond3_MPT_df
                    # switch sign of asynchrony in positive perturbations
@@ -1870,7 +1870,7 @@ def Plot_Mean_Across_Subjects_for_Type_Sign_and_Context(data_GroupCond_MPT_df, d
                 + ggtitle("(b)")
                 )
     #print(plot_q)
-    #plot_q.save('../data/' + 'plot_q.pdf')
+    #plot_q.save('../analysis/' + 'plot_q.pdf')
 
     # Plotting
     plot_l2 = pw.load_ggplot(plot_l)
@@ -1880,9 +1880,9 @@ def Plot_Mean_Across_Subjects_for_Type_Sign_and_Context(data_GroupCond_MPT_df, d
     plot_p2 = pw.load_ggplot(plot_p)
     plot_q2 = pw.load_ggplot(plot_q)
     plot_mnl = plot_m2|plot_n2|plot_l2
-    plot_mnl.savefig('../data/' + 'plot_mnl.pdf')
+    #plot_mnl.savefig('../analysis/' + 'plot_mnl.pdf')
     plot_pqo = plot_p2|plot_q2|plot_o2
-    plot_pqo.savefig('../data/' + 'plot_pqo.pdf')
+    #plot_pqo.savefig('../analysis/' + 'plot_pqo.pdf')
 
 
 #%%
