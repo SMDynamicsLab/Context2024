@@ -8,6 +8,13 @@ Created on Thu Sep  8 13:46:34 2022
 
 import numpy as np
 import analysis_aux_3 as aux
+from scipy import stats as st
+import pandas as pd
+from matplotlib import cm
+from matplotlib.colors import rgb2hex
+from plotnine import ggplot, aes, geom_line, geom_errorbar, geom_point, scale_linetype_manual, scale_shape_manual, scale_size_manual
+from plotnine import scale_x_continuous, theme, scale_color_manual, facet_grid
+from plotnine import xlab, ylab, theme_bw, element_rect, ggtitle, themes, element_text, element_blank
 
 
 #%% Define Python user-defined exceptions.
@@ -236,12 +243,101 @@ aux.Plot_Mean_Across_Subjects_for_Type_Sign_and_Context(data_GroupCond_MPT2_df, 
 #%%
 general_cond_dict_df = data_GroupSubjCond_OS_df[0]
 general_proc_data_withoutOutliers_df = data_OutSubj_df[3]
-general_proc_data_withoutOutliers_df.to_csv(path + "general_proc_data_withoutOutliers_df.csv", na_rep = np.NaN)
+#general_proc_data_withoutOutliers_df.to_csv(path + "general_proc_data_withoutOutliers_df.csv", na_rep = np.NaN)
 
-general_proc_data_block0_df = general_proc_data_withoutOutliers_df[general_proc_data_withoutOutliers_df["Block"]==0].reset_index(drop=True)
-general_proc_data_block0_df.to_csv(path + "general_proc_data_block0_df.csv", na_rep = np.NaN)
+# Mean across trials
+data_across_trials_df = (general_proc_data_withoutOutliers_df.
+                         groupby(["Exp_name", "Experiment", "Subject", "Block", "General_condition", "Condition", "Relative_beep"], as_index=False).
+                         agg(mean_asyn=("Asyn_zeroed","mean"),std_asyn=("Asyn_zeroed","std"), sem_asyn=("Asyn_zeroed","sem"), 
+                             n_asyn=("Asyn_zeroed","size"), ci_asyn=("Asyn_zeroed", lambda value: 1.96 * st.sem(value, axis=None))))
+#data_across_trials_df.to_csv(path + 'data_across_trials_df',na_rep = np.NaN)
+
+# Mean across subjects
+data_across_subjects_df = (data_across_trials_df.
+                           groupby(["Exp_name", "Experiment", "Block", "General_condition", "Condition", "Relative_beep"], as_index=False).
+                           agg(mean_asyn = ("mean_asyn", "mean"), std_asyn=("mean_asyn","std"), sem_asyn = ("mean_asyn", "sem"), 
+                               n_subj=("Subject","size"), ci_asyn=("mean_asyn", lambda value: 1.96 * st.sem(value, axis=None))))
+#data_across_subjects_df.to_csv(path + 'data_across_subjects_df',na_rep = np.NaN)
+
+# Plotting data
+general_cond_dict_df = general_cond_dict_df.drop(columns = ['Condition', 'Experiment', 'Exp_name'])
+data_plot_df = pd.merge(general_cond_dict_df, data_across_subjects_df, on=["General_condition"]).reset_index(drop = True)
+data_plot_df.query("Perturb_size != 0", inplace=True)
+data_plot_df.insert(0, 'Context', np.select([data_plot_df['Exp_name']=='Experiment_PS',
+                                                        data_plot_df['Exp_name']=='Experiment_SC', 
+                                                        data_plot_df['Exp_name']=='Experiment_PS_SC',
+                                                        data_plot_df['Exp_name']=='Experiment2_PS_SC'],
+                                                       ['pure', 'pure', 'comb', 'comb']))
+data_plot_df.insert(1, 'Type', np.where(data_plot_df['Perturb_type']==0,'SC','PS'))
+data_plot_df.insert(2, 'Sign', np.where(data_plot_df['Perturb_size']>0,'pos', 'neg'))
+data_plot_df.drop(columns = ["Experiment", 'Exp_name', 'Perturb_type', 'General_condition', 'Condition', 'Name'], inplace = True)
+
+# Filtering Perturb_size == 20
+#data_plot_df.query("Perturb_size == -20 | Perturb_size == 20", inplace=True)
+# Filtering Perturb_size == 50
+data_plot_df.query("Perturb_size == -50 | Perturb_size == 50", inplace=True)
+data_plot_df.drop(columns = ['Perturb_size'], inplace = True)
+
+# Filtering per blocks
+data_plot_df.query("Block == 0 | Block == 2", inplace=True)
+#data_plot_df.to_csv(path + 'data_plot_df',na_rep = np.NaN)
 
 
+# Parameters
+#color_map = ["blue","magenta"]
+lower_color = 0
+upper_color = 3
+num_colors = 5
+color_map_rgba = cm.get_cmap('plasma')(np.linspace(lower_color,upper_color,num_colors))
+color_map_hex = [rgb2hex(color, keep_alpha=True) for color in color_map_rgba.tolist()]  
+line_map = ["solid","dashed"]
+shape_map = ["s","D"]
+size_map = (0.1,0.5,1)
+marker_size = 1
+ast_size = 1
+error_width = 0.1
+fig_xsize = 20 * 0.393701   # centimeter to inch
+fig_ysize = 12 * 0.393701   # centimeter to inch
+x_lims = [-3,11]
+
+# Filtering and ordering information
+data_plot_df = data_plot_df[(data_plot_df['Relative_beep'] >= x_lims[0]) & (data_plot_df['Relative_beep'] <= x_lims[1])]
+data_plot_df.rename(columns={"mean_asyn": "Asyn_zeroed"}, inplace=True)
+data_plot_df["Block"] = data_plot_df["Block"].astype('string')
+
+# Plotting
+plot = (
+        ggplot(data_plot_df) 
+        + aes(x = 'Relative_beep', y = 'Asyn_zeroed',
+              color = 'Context',
+              linetype = 'Sign',
+              shape = 'Type',
+              size = 'Block')
+        + facet_grid(facets="Sign~Type")
+        + geom_line()
+        + geom_point(size = marker_size)
+        + scale_color_manual(values = color_map_hex)
+        + scale_linetype_manual(values = line_map)
+        + scale_shape_manual(values = shape_map)
+        + scale_size_manual(values=size_map)
+        + scale_x_continuous(breaks=range(x_lims[0]+1,x_lims[1],2))
+        + theme_bw(base_size=12)
+        + theme(legend_title = element_text(size=9),
+              legend_text=element_text(size=9),
+              legend_key=element_rect(fill = "white", color = 'white'), 
+              figure_size = (fig_xsize, fig_ysize))
+        + themes.theme(
+              axis_title_y = themes.element_text(angle = 90, va = 'center', size = 10),
+              axis_title_x = themes.element_text(va = 'center', size = 10))           
+        + theme(strip_background = element_blank())
+        + xlab("Beep $n$ relative to perturbation")
+        + ylab("Asynchrony (ms)")
+        )
+print(plot)
+plot.save('../analysis/' + 'plot.pdf')
+
+
+#%%
 
 
 
