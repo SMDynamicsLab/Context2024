@@ -15,6 +15,7 @@ from matplotlib.colors import rgb2hex
 from plotnine import ggplot, aes, geom_line, geom_errorbar, geom_point, scale_linetype_manual, scale_shape_manual, scale_size_manual
 from plotnine import scale_x_continuous, theme, scale_color_manual, facet_grid
 from plotnine import xlab, ylab, theme_bw, element_rect, ggtitle, themes, element_text, element_blank
+import patchworklib as pw
 
 
 #%% Define Python user-defined exceptions.
@@ -240,7 +241,7 @@ aux.Plot_Mean_Across_Subjects_for_Type_Sign_and_Context(data_GroupCond_MPT2_df, 
 
 
 
-#%%
+#%% Mean across trials and subjects
 general_cond_dict_df = data_GroupSubjCond_OS_df[0]
 general_proc_data_withoutOutliers_df = data_OutSubj_df[3]
 #general_proc_data_withoutOutliers_df.to_csv(path + "general_proc_data_withoutOutliers_df.csv", na_rep = np.NaN)
@@ -259,7 +260,8 @@ data_across_subjects_df = (data_across_trials_df.
                                n_subj=("Subject","size"), ci_asyn=("mean_asyn", lambda value: 1.96 * st.sem(value, axis=None))))
 #data_across_subjects_df.to_csv(path + 'data_across_subjects_df',na_rep = np.NaN)
 
-# Plotting data
+
+#%% Ordering data for plotting
 general_cond_dict_df = general_cond_dict_df.drop(columns = ['Condition', 'Experiment', 'Exp_name'])
 data_plot_df = pd.merge(general_cond_dict_df, data_across_subjects_df, on=["General_condition"]).reset_index(drop = True)
 data_plot_df.query("Perturb_size != 0", inplace=True)
@@ -271,17 +273,32 @@ data_plot_df.insert(0, 'Context', np.select([data_plot_df['Exp_name']=='Experime
 data_plot_df.insert(1, 'Type', np.where(data_plot_df['Perturb_type']==0,'SC','PS'))
 data_plot_df.insert(2, 'Sign', np.where(data_plot_df['Perturb_size']>0,'pos', 'neg'))
 data_plot_df.drop(columns = ["Experiment", 'Exp_name', 'Perturb_type', 'General_condition', 'Condition', 'Name'], inplace = True)
+data_plot_df.to_csv(path + 'data_plot_df',na_rep = np.NaN)
+
+
+#%%
+
+
+
+
+
+
+
+
+
+
+#%% Plotting across subject per context, size, sign and block
+data_plot2_df = data_plot_df.reset_index(drop=True)
 
 # Filtering Perturb_size == 20
-#data_plot_df.query("Perturb_size == -20 | Perturb_size == 20", inplace=True)
+#data_plot2_df.query("Perturb_size == -20 | Perturb_size == 20", inplace=True)
 # Filtering Perturb_size == 50
-data_plot_df.query("Perturb_size == -50 | Perturb_size == 50", inplace=True)
-data_plot_df.drop(columns = ['Perturb_size'], inplace = True)
+data_plot2_df.query("Perturb_size == -50 | Perturb_size == 50", inplace=True)
+data_plot2_df.drop(columns = ['Perturb_size'], inplace = True)
 
 # Filtering per blocks
-data_plot_df.query("Block == 0 | Block == 2", inplace=True)
-#data_plot_df.to_csv(path + 'data_plot_df',na_rep = np.NaN)
-
+data_plot2_df.query("Block == 0 | Block == 2", inplace=True)
+#data_plot2_df.to_csv(path + 'data_plot2_df',na_rep = np.NaN)
 
 # Parameters
 #color_map = ["blue","magenta"]
@@ -301,13 +318,13 @@ fig_ysize = 12 * 0.393701   # centimeter to inch
 x_lims = [-3,11]
 
 # Filtering and ordering information
-data_plot_df = data_plot_df[(data_plot_df['Relative_beep'] >= x_lims[0]) & (data_plot_df['Relative_beep'] <= x_lims[1])]
-data_plot_df.rename(columns={"mean_asyn": "Asyn_zeroed"}, inplace=True)
-data_plot_df["Block"] = data_plot_df["Block"].astype('string')
+data_plot2_df = data_plot2_df[(data_plot2_df['Relative_beep'] >= x_lims[0]) & (data_plot2_df['Relative_beep'] <= x_lims[1])]
+data_plot2_df.rename(columns={"mean_asyn": "Asyn_zeroed"}, inplace=True)
+data_plot2_df["Block"] = data_plot2_df["Block"].astype('string')
 
 # Plotting
 plot = (
-        ggplot(data_plot_df) 
+        ggplot(data_plot2_df) 
         + aes(x = 'Relative_beep', y = 'Asyn_zeroed',
               color = 'Context',
               linetype = 'Sign',
@@ -340,6 +357,181 @@ plot.save('../analysis/' + 'plot.pdf')
 #%%
 
 
+
+
+
+
+
+
+
+
+#%% Difference across subject between context per sign, type and block
+data_plot3_df = data_plot_df.reset_index(drop=True)
+
+# Filtering Perturb_size == 20
+#data_plot3_df.query("Perturb_size == -20 | Perturb_size == 20", inplace=True)
+# Filtering Perturb_size == 50
+data_plot3_df.query("Perturb_size == -50 | Perturb_size == 50", inplace=True)
+data_plot3_df.drop(columns = ['Perturb_size'], inplace = True)
+
+# Filtering per blocks
+#data_plot3_df.query("Block == 0 | Block == 2", inplace=True)
+data_plot3_df.to_csv(path + 'data_plot3_df',na_rep = np.NaN)
+
+# Difference between contexts
+data_contextdiff_df = (data_plot3_df.groupby(['Type','Sign','Block','Relative_beep'], as_index=False).
+                       apply(lambda df: pd.Series({'diff': np.diff(df.mean_asyn).item(),
+                                                   'var_pooled': ((df.n_subj-1)*df.std_asyn**2).sum()/(df.n_subj-1).sum(),
+                                                   'n_pooled': (df.std_asyn**2/df.n_subj).sum()**2/((df.std_asyn**2/df.n_subj)**2/(df.n_subj-1)).sum()
+                                                   })))
+data_contextdiff_df = (data_contextdiff_df
+					   # confidence intervals
+					   .assign(ci_diff = lambda df: 1.96*np.sqrt(df.var_pooled)/np.sqrt(df.n_pooled))
+					   # create label for plot grouping
+					   .assign(Title = lambda df: df.Type + df.Sign)
+					   )
+data_contextdiff_df.to_csv(path + 'data_contextdiff_df',na_rep = np.NaN)
+
+# Parameters
+line_map = ["solid","dashed"]
+shape_map = ["s","D"]
+size_map = (0.2,0.4,0.6)
+marker_size = 2
+error_width = 0.1
+fig_xsize = 15 * 0.393701   # centimeter to inch
+fig_ysize = 9 * 0.393701   # centimeter to inch
+fig_xsize2 = 5 * 0.393701   # centimeter to inch
+fig_ysize2 = 9 * 0.393701   # centimeter to inch
+x_lims = [-3,11]
+
+# Filtering and ordering information
+data_contextdiff_df = data_contextdiff_df[(data_contextdiff_df['Relative_beep'] >= x_lims[0]) & (data_contextdiff_df['Relative_beep'] <= x_lims[1])]
+data_contextdiff_df.rename(columns={"diff": "Asyn_zeroed"}, inplace=True)
+data_contextdiff_df.rename(columns={"ci_diff": "ci_asyn"}, inplace=True)
+data_contextdiff_df["Block"] = data_contextdiff_df["Block"].astype('string')
+
+# Plotting
+plot2 = (ggplot(data_contextdiff_df, aes(x = 'Relative_beep', 
+                                         y = 'Asyn_zeroed', 
+                                         linetype = 'Sign', 
+                                         shape = 'Type',
+                                         size = 'Block'))
+          + geom_line()
+          + geom_errorbar(aes(x = 'Relative_beep', ymin = "Asyn_zeroed-ci_asyn", ymax = "Asyn_zeroed+ci_asyn", width = error_width))
+          + geom_point(size = marker_size)
+          + scale_linetype_manual(values = line_map, guide=False)
+          + scale_shape_manual(values = shape_map, guide=False)
+          + scale_size_manual(values=size_map, guide=False)
+          + scale_x_continuous(breaks=range(x_lims[0]+1,x_lims[1],2))
+          + theme_bw(base_size=14)
+          + theme(legend_key=element_rect(fill = "white", color = 'white'), figure_size = (fig_xsize, fig_ysize))  
+          + themes.theme(
+              axis_title_y = themes.element_text(angle = 90, va = 'center', size = 12),
+              axis_title_x = themes.element_text(va = 'center', size = 12))
+          + xlab("Beep $n$ relative to perturbation")
+          + ylab("Difference (ms)")
+          + ggtitle("(a)")
+          )
+#print(plot2)
+#plot2.save('../analysis/' + 'plot2.pdf')
+
+
+# Difference across subject between context per sign, type and block (mean asyn resynchronization phase)
+data_plot4_df = data_plot_df.reset_index(drop=True)
+
+# Filtering Perturb_size == 20
+#data_plot4_df.query("Perturb_size == -20 | Perturb_size == 20", inplace=True)
+# Filtering Perturb_size == 50
+data_plot4_df.query("Perturb_size == -50 | Perturb_size == 50", inplace=True)
+data_plot4_df.drop(columns = ['Perturb_size'], inplace = True)
+
+# Filtering per blocks
+#data_plot4_df.query("Block == 0 | Block == 2", inplace=True)
+#data_plot4_df.to_csv(path + 'data_plot4_df',na_rep = np.NaN)
+
+# Select resynchronization phase
+resynch_start = 1	# bip number
+resynch_end = 6
+data_plot4_df.query("(Type=='SC' and (Relative_beep>=@resynch_start and Relative_beep<=@resynch_end)) or (Type=='PS' and (Relative_beep>=@resynch_start+1 and Relative_beep<=@resynch_end))", inplace=True)
+data_plot4_df.to_csv(path + 'data_plot4_df',na_rep = np.NaN)							   
+
+# Difference between contexts, resynchronization phase only, after averaging across subjects and beeps
+data_contextdiff_resynch_df = (data_plot4_df
+							   # first average across subjects and beeps
+							   .groupby(['Context','Type','Sign','Block'], as_index=False)
+							   .apply(lambda df: pd.Series({
+								   'mean_asyn': df.mean_asyn.mean(),
+								   'std_asyn': df.mean_asyn.std(),
+								   'n_asyn': df.mean_asyn.count()
+								   }))
+ 							   # then compute diff
+							   .groupby(['Type','Sign','Block'], as_index=False)
+							   .apply(lambda df: pd.Series({
+								   'diff': np.diff(df.mean_asyn).item(),
+								   'var_pooled': (((df.n_asyn-1)*df.std_asyn**2).sum())/((df.n_asyn-1).sum()),
+								   'n_pooled': ((df.std_asyn**2/df.n_asyn).sum())**2/(((df.std_asyn**2/df.n_asyn)**2/(df.n_asyn-1)).sum())
+								   }))
+							   )
+data_contextdiff_resynch_df = (data_contextdiff_resynch_df
+							   # confidence intervals
+							   .assign(ci_diff = lambda df: 1.96*np.sqrt(df['var_pooled'])/np.sqrt(df['n_pooled']))
+							   # create label for plot grouping
+							   .assign(Title = lambda df: df.Type + df.Sign)
+							   )
+data_contextdiff_resynch_df.to_csv(path + 'data_contextdiff_resynch_df',na_rep = np.NaN)
+
+# Filtering and ordering information
+data_contextdiff_resynch_df.rename(columns={"diff": "Asyn_zeroed"}, inplace=True)
+data_contextdiff_resynch_df.rename(columns={"ci_diff": "ci_asyn"}, inplace=True)
+data_contextdiff_resynch_df["Block"] = data_contextdiff_resynch_df["Block"].astype('string')
+
+# Set level order
+levels_TS = ['PSpos','SCneg','SCpos','PSneg']
+data_contextdiff_resynch_df['Title'] = data_contextdiff_resynch_df['Title'].astype("category").cat.set_categories(levels_TS, ordered=True)
+
+# Plotting
+plot3 = (
+            ggplot(data_contextdiff_resynch_df, aes(x = 'Title', 
+                                                    y = 'Asyn_zeroed', 
+                                                    linetype = 'Sign', 
+                                                    shape = 'Type',
+                                                    size = 'Block'))
+            + geom_point()
+            + geom_errorbar(aes(x = 'Title', ymin = "Asyn_zeroed-ci_asyn", ymax = "Asyn_zeroed+ci_asyn", width = error_width))
+            + scale_linetype_manual(values = line_map)
+            + scale_shape_manual(values = shape_map)
+            + scale_size_manual(values=size_map)
+            + theme_bw(base_size=14)
+            + theme(legend_key=element_rect(fill = "white", color = 'white'), figure_size = (fig_xsize2, fig_ysize2))
+            + themes.theme(
+                axis_title_y = themes.element_text(angle = 90, va = 'center', size = 12),
+                axis_title_x = themes.element_text(va = 'center', size = 12))
+            + xlab("Condition")
+            + ylab("Average asymmetry (ms) (beeps 1 through 6)")
+            + ggtitle("(b)")
+         )
+#print(plot3)
+#plot3.save('../analysis/' + 'plot3.pdf')
+
+# Plotting
+plot2 = pw.load_ggplot(plot2)
+plot3 = pw.load_ggplot(plot3)
+plot23 = plot2|plot3
+plot23.savefig('../analysis/' + 'plot23.pdf')
+
+
+#%%
+
+
+
+
+
+
+
+
+
+
+#%% Difference across subject between blocks per context, sign and type
 
 
 
