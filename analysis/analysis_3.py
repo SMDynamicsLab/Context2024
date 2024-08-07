@@ -493,9 +493,11 @@ data_contextdiff_resynch_df['Title'] = data_contextdiff_resynch_df['Title'].asty
 plot3 = (
             ggplot(data_contextdiff_resynch_df, aes(x = 'Title', 
                                                     y = 'Asyn_zeroed', 
+                                                    group = 'Block',
                                                     linetype = 'Sign', 
                                                     shape = 'Type',
                                                     size = 'Block'))
+            + geom_line(color="black", linetype="dotted")
             + geom_point()
             + geom_errorbar(aes(x = 'Title', ymin = "Asyn_zeroed-ci_asyn", ymax = "Asyn_zeroed+ci_asyn", width = error_width))
             + scale_linetype_manual(values = line_map)
