@@ -1,0 +1,320 @@
+---
+title: "Hypothesis testing - Silva & Laje 2024"
+output: html_document
+date: "2024-04-26"
+---
+
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+library(car)
+library(magrittr)
+library(emmeans)
+library(patchwork)
+
+
+```
+
+
+```{r load_data, echo=FALSE}
+
+data_df = read.csv("../data/data_GroupSubjCond_OS_df.csv")
+dict_df = read.csv("../data/data_GroupSubjCond_OS_dict.csv")
+
+
+
+
+```
+
+```{r rearrange_data, echo=FALSE}
+
+# DeltaT <- 50
+
+# select relevant data
+data_aux_df <- data_df %>%
+			select('Exp_name','General_condition','Subject',
+				   'Relative_beep','mean_asyn') %>%
+			rename(beep=Relative_beep, asyn=mean_asyn) %>%
+			mutate(subject = if_else(Exp_name=='Experiment_PS', Subject+100, # make subject unique
+									 if_else(Exp_name=='Experiment_SC', Subject+200, Subject+300)),
+				   context = if_else(Exp_name=='Experiment_PS_SC'
+				   				| Exp_name=='Experiment2_PS_SC', 'comb', 'pure')) # define context
+
+# add missing data
+data_all_df <- inner_join(
+				data_aux_df,
+				dict_df[,c('General_condition','Name','Perturb_type','Perturb_size')],
+				by='General_condition') %>%
+			mutate(perturb_type = if_else(Perturb_type==0, 'SC', 'PS'),
+				   perturb_sign = case_when(
+				   					Perturb_size>0 ~ 'pos',
+				   					Perturb_size<0 ~ 'neg',
+				   					Perturb_size==0 ~ 'iso'),
+				   perturb_mag = case_when(
+				   					abs(Perturb_size)==50 ~ 50,
+				   					abs(Perturb_size)==20 ~ 20,
+				   					Perturb_size==0 ~ 0),
+				   pred_asyn = case_when(
+				   					# SC and PS cases
+				   					beep==0 & perturb_sign=='pos' ~ asyn+perturb_mag,
+				   					beep==0 & perturb_sign=='neg' ~ asyn-perturb_mag,
+				   					# PS cases
+				   					beep==1 & perturb_type=='PS'& perturb_sign=='pos'
+				   												~ asyn-perturb_mag,
+				   					beep==1 & perturb_type=='PS'& perturb_sign=='neg'
+				   												~ asyn+perturb_mag,
+				   					# iso cases and every other beep
+				   					TRUE ~ asyn)
+				   ) %>%
+			# drop unused columns
+			select(-c('Exp_name','General_condition','Perturb_type','Perturb_size','Name',
+					  'Subject')) %>%
+			# reorder columns
+			select(c('context','perturb_type','perturb_sign','perturb_mag','subject','beep',
+					 'asyn','pred_asyn'))
+# order factor
+data_all_df$context <- factor(data_all_df$context, levels=c('pure','comb'))
+
+data50_df <- data_all_df %>%
+				filter(perturb_mag==50)
+data20_df <- data_all_df %>%
+				filter(perturb_mag==20)
+
+# define limits of resynchronization phase (beeps)
+resynch_start <- 1
+resynch_end <- 6
+
+```
+
+
+# Larger perturbation size
+```{r fit_model_DIFF_lme4, echo=FALSE}
+
+# select resynchronization phase only
+data50_red_df <- data50_df %>% filter(
+							beep>=resynch_start & beep<=resynch_end
+							)
+
+# specific model: 3rd-order interaction
+# main effect of context or any of its interactions
+model_diff_3int <- lmer(asyn ~ context + perturb_type + perturb_sign
+						+ context:perturb_type
+						+ context:perturb_sign
+						+ context:perturb_type:perturb_sign
+						+ (1|subject),
+						data = data50_red_df,
+						REML = TRUE) # unbiased estimation of fixed effects
+									 # (not appropriate for model comparison)
+anova_table_diff_3int <- Anova(model_diff_3int, type="III")
+print(anova_table_diff_3int)
+
+# alternative model: up to 2nd-order interactions
+model_diff_alt <- lmer(asyn ~ context + perturb_type + perturb_sign
+						+ context:perturb_type
+						+ context:perturb_sign
+						+ perturb_type:perturb_sign
+						+ (1|subject),
+						data = data50_red_df,
+						REML = TRUE) # unbiased estimation of fixed effects
+									 # (not appropriate for model comparison)
+anova_table_diff_alt <- Anova(model_diff_alt, type="III")
+print(anova_table_diff_alt)
+
+anova_table_comp <- anova(model_diff_alt,model_diff_3int, test=TRUE)
+print(anova_table_comp)
+
+
+```
+
+```{r marginal_means_DIFF}
+
+# post-hoc comparisons
+model_diff_3int_emm <- emmeans(model_diff_3int, ~ context:perturb_type:perturb_sign)
+
+# contrasts (post-hoc comparisons)
+# print estimates and confidence intervals
+model_diff_3int_emm_pairs <- pairs(model_diff_3int_emm, simple="context", infer=c(TRUE,TRUE))
+print(model_diff_3int_emm_pairs)
+# print corrected p-values
+model_diff_3int_emm_test <- test(model_diff_3int_emm_pairs, cross.adjust="fdr", type="response")
+print(model_diff_3int_emm_test)
+
+# compute confidence intervals
+model_diff_3int_emm_test_CI <- model_diff_3int_emm_test %>%
+								mutate(LCI = estimate - 1.96*SE,
+									   UCI = estimate + 1.96*SE)
+print(model_diff_3int_emm_test_CI)
+
+
+```
+
+
+```{r fit_model_ASYM_lme4, echo=FALSE}
+
+data50_red_inv_df <- data50_red_df %>%
+					# switch sign of negative perturbations
+					mutate(asyn = if_else(perturb_sign=='pos',-asyn,asyn))
+
+# specific model: main effect of perturb_sign or any of its interactions
+# (asymmetry = difference between signs)
+# interaction between perturb_sign, perturb_type and context (perturb_sign has a
+# differential effect depending on the type of perturbation AND the context, i.e. pure
+# context makes SCs more asymmetrical but PSs less asymmetrical)
+model_asym_3int <- lmer(asyn ~ context + perturb_type + perturb_sign
+						+ context:perturb_sign
+						+ perturb_type:perturb_sign
+						+ context:perturb_type:perturb_sign
+						+ (1|subject),
+						data = data50_red_inv_df,
+						REML = TRUE) # unbiased estimation of fixed effects
+									 # (not appropriate for model comparison)
+anova_table_asym_3int <- Anova(model_asym_3int, type="III")
+print(anova_table_asym_3int)
+
+
+# alternative model: all first-order interactions, no second-order interaction
+model_asym_alt <- lmer(asyn ~ context + perturb_type + perturb_sign
+						+ context:perturb_type
+						+ context:perturb_sign
+						+ perturb_type:perturb_sign
+						+ (1|subject),
+						data = data50_red_inv_df,
+						REML = TRUE) # unbiased estimation of fixed effects
+									 # (not appropriate for model comparison)
+anova_table_asym_alt <- Anova(model_asym_alt, type="III")
+print(anova_table_asym_alt)
+
+
+# model comparison
+anova(model_asym_alt, model_asym_3int, test=TRUE)
+
+
+```
+
+```{r marginal_means_ASYM}
+
+# post-hoc comparisons
+model_asym_3int_emm <- emmeans(model_asym_3int, ~ context:perturb_type:perturb_sign)
+model_asym_3int_emm_pairs <- pairs(model_asym_3int_emm, simple="perturb_sign", infer=c(TRUE,TRUE))
+model_asym_3int_emm_contrast <- contrast(model_asym_3int_emm_pairs, "pairwise", by=NULL,
+										 adjust="sidak")[c(1,5,6),]
+model_asym_3int_emm_contrast_CI <- summary(model_asym_3int_emm_contrast)
+model_asym_3int_emm_contrast_CI <- model_asym_3int_emm_contrast_CI %>%
+								mutate(LCI = estimate - 1.96*SE,
+									   UCI = estimate + 1.96*SE)
+print(model_asym_3int_emm_contrast_CI)
+
+# comparison between asymmetry of pure conditions
+# pure SC is more asymmetrical than pure PS
+model_asym_3int_emm_pures <- contrast(model_asym_3int_emm_pairs, "pairwise", by=NULL, adjust=NULL)[2]#[5]
+model_asym_3int_emm_pures_CI <- summary(model_asym_3int_emm_pures) %>%
+								mutate(LCI = estimate - 1.96*SE,
+									   UCI = estimate + 1.96*SE)
+print(model_asym_3int_emm_pures_CI)
+
+
+```
+
+
+# Smaller perturbation size
+```{r fit_model_DIFF_lme4_20ms, echo=FALSE}
+
+# select resynchronization phase only
+data20_red_df <- data20_df %>% filter(
+							beep>=resynch_start & beep<=resynch_end
+							)
+
+# specific model: 3rd-order interaction
+# main effect of context or any of its interactions
+model_diff_20ms_3int <- lmer(asyn ~ context + perturb_type + perturb_sign
+						+ context:perturb_type
+						+ context:perturb_sign
+						+ context:perturb_type:perturb_sign
+						+ (1|subject),
+						data = data20_red_df,
+						REML = TRUE) # unbiased estimation of fixed effects
+									 # (not appropriate for model comparison)
+anova_table_diff_20ms_3int <- Anova(model_diff_20ms_3int, type="III")
+print(anova_table_diff_20ms_3int)
+
+```
+
+
+```{r marginal_means_DIFF_20ms}
+
+# post-hoc comparisons
+model_diff_20ms_3int_emm <- emmeans(model_diff_20ms_3int, ~ context:perturb_type:perturb_sign)
+
+# contrasts (post-hoc comparisons)
+# print estimates and confidence intervals
+model_diff_20ms_3int_emm_pairs <- pairs(model_diff_20ms_3int_emm, simple="context",
+										infer=c(TRUE,TRUE))
+print(model_diff_20ms_3int_emm_pairs)
+# print corrected p-values
+model_diff_20ms_3int_emm_test <- test(model_diff_20ms_3int_emm_pairs, cross.adjust="fdr",
+										type="response")
+print(model_diff_20ms_3int_emm_test)
+
+# compute confidence intervals
+model_diff_20ms_3int_emm_test_CI <- model_diff_20ms_3int_emm_test %>%
+										mutate(LCI = estimate - 1.96*SE,
+											   UCI = estimate + 1.96*SE)
+print(model_diff_20ms_3int_emm_test_CI)
+
+
+```
+
+
+```{r fit_model_ASYM_lme4_20ms, echo=FALSE}
+
+data20_red_inv_df <- data20_red_df %>%
+					# switch sign of negative perturbations
+					mutate(asyn = if_else(perturb_sign=='pos',-asyn,asyn))
+
+# specific model: main effect of perturb_sign or any of its interactions
+# (asymmetry = difference between signs)
+# interaction between perturb_sign, perturb_type and context (perturb_sign has a
+# differential effect depending on the type of perturbation AND the context, i.e. pure
+# context makes SCs more asymmetrical but PSs less asymmetrical)
+model_asym_20ms_3int <- lmer(asyn ~ context + perturb_type + perturb_sign
+						+ context:perturb_sign
+						+ perturb_type:perturb_sign
+						+ context:perturb_type:perturb_sign
+						+ (1|subject),
+						data = data20_red_inv_df,
+						REML = TRUE) # unbiased estimation of fixed effects
+									 # (not appropriate for model comparison)
+anova_table_asym_20ms_3int <- Anova(model_asym_20ms_3int, type="III")
+print(anova_table_asym_20ms_3int)
+
+```
+
+
+```{r marginal_means_ASYM_20ms}
+
+# post-hoc comparisons
+model_asym_20ms_3int_emm <- emmeans(model_asym_20ms_3int, ~ context:perturb_type:perturb_sign)
+model_asym_20ms_3int_emm_pairs <- pairs(model_asym_20ms_3int_emm, simple="perturb_sign",
+										infer=c(TRUE,TRUE))
+model_asym_20ms_3int_emm_contrast <- contrast(model_asym_20ms_3int_emm_pairs, "pairwise",
+											  by=NULL, adjust="sidak")[c(1,5,6),]
+model_asym_20ms_3int_emm_contrast_CI <- summary(model_asym_20ms_3int_emm_contrast)
+model_asym_20ms_3int_emm_contrast_CI <- model_asym_20ms_3int_emm_contrast_CI %>%
+								mutate(LCI = estimate - 1.96*SE,
+									   UCI = estimate + 1.96*SE)
+print(model_asym_20ms_3int_emm_contrast_CI)
+
+# comparison between asymmetry of pure conditions
+# pure SC is more asymmetrical than pure PS
+model_asym_20ms_3int_emm_pures <- contrast(model_asym_20ms_3int_emm_pairs, "pairwise",
+										   by=NULL, adjust=NULL)[2]
+model_asym_20ms_3int_emm_pures_CI <- summary(model_asym_20ms_3int_emm_pures) %>%
+								mutate(LCI = estimate - 1.96*SE,
+									   UCI = estimate + 1.96*SE)
+print(model_asym_20ms_3int_emm_pures_CI)
+
+
+```
+
